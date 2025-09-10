@@ -25,3 +25,10 @@ body {
   border-radius: 8px;
   background: #ffe;
 }
+
+canvas {
+  display: block;
+  margin: 10px auto;
+  border: 2px solid #333;
+  background: #fafafa;
+}
