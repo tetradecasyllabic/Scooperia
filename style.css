@@ -1,0 +1,27 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f7e7ce;
+  text-align: center;
+}
+
+#game {
+  margin: 20px auto;
+  padding: 20px;
+  background: #fff3e6;
+  border-radius: 12px;
+  width: 600px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+#customerArea {
+  margin: 20px 0;
+}
+
+.customer {
+  display: inline-block;
+  margin: 10px;
+  padding: 10px;
+  border: 2px solid #333;
+  border-radius: 8px;
+  background: #ffe;
+}
