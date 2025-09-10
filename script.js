@@ -8,7 +8,7 @@ let gameState = loadGame() || {
 
 const names = ["Alex", "Maya", "Jordan", "Sam", "Luna", "Chris", "Riley", "Ava"];
 
-// --- Utilities ---
+// --- Save/Load ---
 function saveGame() {
   localStorage.setItem("scooperiaSave", JSON.stringify(gameState));
 }
@@ -28,7 +28,6 @@ function getCustomersForDay(day) {
   return customers;
 }
 
-// --- Display Customers ---
 function renderCustomers() {
   const area = document.getElementById("customerArea");
   area.innerHTML = "";
@@ -41,33 +40,129 @@ function renderCustomers() {
 }
 
 // --- Order Flow ---
-let currentStep = 0;
-function doStep(stepName) {
-  if (currentStep === 0 && stepName === "roll") {
-    currentStep = 1;
-    showResult("You rolled the dough 🍪");
-  } else if (currentStep === 1 && stepName === "bake") {
-    currentStep = 2;
-    showResult("You baked the dough 🔥");
-  } else if (currentStep === 2 && stepName === "scoop") {
-    currentStep = 3;
-    showResult("You scooped ice cream 🍦");
-  } else if (currentStep === 3 && stepName === "topping") {
-    currentStep = 4;
-    showResult("You added toppings 🍫");
-  } else if (currentStep === 4 && stepName === "finish") {
-    finishOrder();
-  } else {
-    showResult("Wrong step ❌");
+let step = 0;
+
+// 🥄 ROLLING DOUGH
+let rollProgress = 0;
+function startRolling() {
+  if (step !== 0) return;
+  let canvas = document.getElementById("rollGame");
+  let ctx = canvas.getContext("2d");
+  rollProgress = 0;
+
+  canvas.onmousemove = () => {
+    rollProgress += 1;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#c96";
+    ctx.beginPath();
+    ctx.arc(150, 75, rollProgress, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (rollProgress > 60) {
+      step = 1;
+      canvas.onmousemove = null;
+      showResult("Dough rolled! 🍪");
+    }
+  };
+}
+
+// 🔥 BAKING
+let bakeTime = 0, bakeTarget = 0, baking = false;
+function startBaking() {
+  if (step !== 1) return;
+  let canvas = document.getElementById("bakeGame");
+  let ctx = canvas.getContext("2d");
+  bakeTime = 0;
+  bakeTarget = 100 + Math.random() * 50;
+  baking = true;
+
+  let interval = setInterval(() => {
+    if (!baking) { clearInterval(interval); return; }
+    bakeTime += 5;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "orange";
+    ctx.fillRect(0, 0, bakeTime, 50);
+
+    if (bakeTime >= 200) {
+      baking = false;
+      step = 2;
+      showResult("Dough baked! 🔥");
+      clearInterval(interval);
+    }
+  }, 100);
+
+  canvas.onclick = () => {
+    baking = false;
+    clearInterval(interval);
+    if (Math.abs(bakeTime - bakeTarget) < 30) {
+      step = 2;
+      showResult("Perfect bake! ⭐");
+    } else {
+      step = 2;
+      showResult("Over/undercooked 😬");
+    }
+  };
+}
+
+// 🍨 SCOOPING
+function startScooping() {
+  if (step !== 2) return;
+  let canvas = document.getElementById("scoopGame");
+  let ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  let scoop = { x: 20, y: 20, grabbed: false };
+  let cookie = { x: 130, y: 100, r: 40 };
+
+  canvas.onmousedown = e => {
+    if (e.offsetX > scoop.x && e.offsetX < scoop.x + 30 && e.offsetY > scoop.y && e.offsetY < scoop.y + 30) {
+      scoop.grabbed = true;
+    }
+  };
+  canvas.onmouseup = () => {
+    scoop.grabbed = false;
+    // check drop
+    let dx = scoop.x - cookie.x, dy = scoop.y - cookie.y;
+    if (Math.sqrt(dx * dx + dy * dy) < cookie.r) {
+      step = 3;
+      showResult("Scooped ice cream! 🍦");
+    }
+  };
+  canvas.onmousemove = e => {
+    if (scoop.grabbed) {
+      scoop.x = e.offsetX - 15;
+      scoop.y = e.offsetY - 15;
+    }
+    draw();
+  };
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // cookie
+    ctx.fillStyle = "#d2a679";
+    ctx.beginPath();
+    ctx.arc(cookie.x, cookie.y, cookie.r, 0, Math.PI * 2);
+    ctx.fill();
+    // scoop
+    ctx.fillStyle = "pink";
+    ctx.beginPath();
+    ctx.arc(scoop.x + 15, scoop.y + 15, 15, 0, Math.PI * 2);
+    ctx.fill();
   }
+  draw();
 }
 
-function showResult(msg) {
-  document.getElementById("orderResult").innerText = msg;
+// 🍫 TOPPING
+function addTopping() {
+  if (step !== 3) return;
+  step = 4;
+  showResult("Added toppings 🍫");
 }
 
+// ✅ FINISH ORDER
 function finishOrder() {
-  currentStep = 0;
+  if (step !== 4) return;
+  step = 0;
   let cust = gameState.customers.find(c => !c.orderDone);
   if (cust) {
     cust.orderDone = true;
@@ -87,7 +182,7 @@ function checkDayEnd() {
   }
 }
 
-// --- UI Update ---
+// --- UI ---
 function updateUI() {
   document.getElementById("dayDisplay").innerText = `Day ${gameState.day} | Money: $${gameState.money}`;
   renderCustomers();
@@ -100,9 +195,6 @@ if (gameState.customers.length === 0) {
 }
 updateUI();
 
-// --- Button Hooks ---
-document.getElementById("rollDough").onclick = () => doStep("roll");
-document.getElementById("bakeDough").onclick = () => doStep("bake");
-document.getElementById("scoopIceCream").onclick = () => doStep("scoop");
-document.getElementById("addTopping").onclick = () => doStep("topping");
-document.getElementById("finishOrder").onclick = () => doStep("finish");
+function showResult(msg) {
+  document.getElementById("orderResult").innerText = msg;
+}
